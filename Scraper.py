@@ -50,3 +50,4 @@ for opinion in opinions:
 
 # - data wystawienia span .review-time > time ["datetime"] - pierwsze wyst
 # - data zakupu .review-time > time ["datetime"] - drugie wystąpienie
+# ananannaannaann

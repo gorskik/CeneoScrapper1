@@ -15,3 +15,9 @@
 - treść: p.product-review-body
 - wady: div.cons-cell > ul
 - zalety: div.pros-cell > ul
+
+## etap 2 - pobranie pojedynczej opinii z pojedynczej strony
+-zapis skladowych opinii do zlozonej struktury danych
+## etap3
+-sposob przechodzenia po kolejnych stronach z opiniami
+-eksport opinii do pliku json
