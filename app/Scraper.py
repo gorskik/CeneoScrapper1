@@ -1,82 +1,84 @@
 #import bibliotek
 import requests
+from bs4 import BeautifulSoup
 import pprint
 import json
-from bs4 import BeautifulSoup
 
-
-#funkcja ekstrakcja składowych opinii
-def extract_feature(opinion, selector, attribute = None):
+#funkcja do ekstrkcji składowych opinii
+def extract_feature(opinion, tag, tag_class, child=None):
     try:
-        if not attribute:
-            return opinion.select(selector).pop().get_text().strip()
+        if child:
+            return opinion.find(tag,tag_class).find(child).get_text().strip()
         else:
-            return opinion.select(selector).pop()[attribute]
-    except IndexError:
+            return opinion.find(tag,tag_class).get_text().strip()
+    except AttributeError:
         return None
-#lista składowych opinii wraz z selektorami i atrybutami
-selectors = {
-            "author":['div.reviewer-name-line'],
-            "recommendation":['div.product-review-summary > em'],
-            "stars":['span.review-score-count'],
-            "content":['p.product-review-body'],
-            "pros":['div.pros-cell > ul'],
-            "cons":['div.cons-cell > ul'],
-            "useful":['button.vote-yes',"data-total-vote"],
-            "useless":['button.vote-no',"data-total-vote"],
-            "purchased":['div.product-review-pz'],
-            "purchase_date":['span.review-time > time:nth-of-type(1)',"datetime"],
-            "review_date":['span.review-time > time:nth-of-type(2)',"datetime"]
-        }
 
-def remove_whitespaces(text):
+tags = {
+    "recommendation":["div","product-review-summary", "em"],
+    "stars":["span", "review-score-count"],
+    "content":["p","product-review-body"],
+    "author":["div", "reviewer-name-line"],
+    "pros":["div", "pros-cell", "ul"],
+    "cons":["div", "cons-cell", "ul"], 
+    "useful":["button","vote-yes", "span"],
+    "useless":["button","vote-no", "span"],
+    "purchased":["div", "product-review-pz", "em"]
+}
+
+#funkcja do usuwania znakó formatujacych
+def remove_whitespaces(string):
     try:
-        for char in ["\n", "\r"]:
-            text = text.replace(char, ". ")
-        return text
+        return string.replace("\n", ", ").replace("\r", ", ")
     except AttributeError:
         pass
-#adres URL strony z opiniami
+
+#adres URL przykładowej strony z opiniami
 url_prefix = "https://www.ceneo.pl"
 product_id = input("Podaj kod produktu: ")
-url_postfix = "/"+ product_id +"#tab=reviews"
-url = url_prefix+url_postfix
+url_postfix = "#tab=reviews"
+url = url_prefix+"/"+product_id+url_postfix
+
+#pusta lista na wszystkie opinie o produkcie
 opinions_list = []
 
-#pobranie kodu HTML strony z adresu URL
-while url is not None:
-    page_response = requests.get(url)
-    page_tree = BeautifulSoup(page_response.text, 'html.parser')
+while url:
+    #poranie kodu html strony zpodanego URL
+    page_respons = requests.get(url)
+    page_tree = BeautifulSoup(page_respons.text, 'html.parser')
 
-    opinions = page_tree.select("li.js_product-review")
+    #wydobycie z kodu HTML strony fragmentów odpowiadajcych poszczególnym opiniom 
+    opinions = page_tree.find_all("li", "js_product-review")
+
+    #wydobycie składowych dla pojedynczej opinii
     for opinion in opinions:
         features = {key:extract_feature(opinion, *args)
-                    for key, args in selectors.items()}
+                    for key, args in tags.items()}
+        features["purchased"] = (features["purchased"]=="Opinia potwierdzona zakupem")
         features["opinion_id"] = int(opinion["data-entry-id"])
-        features["purchased"] = True if features["purchased"] == "Opinia potwierdzona zakupem" else False
         features["useful"] = int(features["useful"])
         features["useless"] = int(features["useless"])
         features["content"] = remove_whitespaces(features["content"])
+        features["pros"] = remove_whitespaces(features["pros"])
+        features["cons"] = remove_whitespaces(features["cons"])
+        dates = opinion.find("span", "review-time").find_all("time")
+        features["review_date"] = dates.pop(0)["datetime"]
         try:
-            features["pros"] = remove_whitespaces(features["pros"])
-        except:
-            pass
-        try:
-            features["cons"] = remove_whitespaces(features["cons"])
-        except:
-            pass
-        
+            features["purchase_date"] = dates.pop(0)["datetime"]
+        except IndexError:
+            features["purchase_date"] = None
+
         opinions_list.append(features)
 
     try:
-        url = url_prefix+page_tree.select("a.pagination__next").pop()["href"]
-    except IndexError:
+        url = url_prefix+page_tree.find("a", "pagination__next")["href"]
+    except TypeError:
         url = None
     print(url)
-# filename = product_id+".json"
-with open("opinions/"+product_id+".json", 'w', encoding="UTF-8") as fp:
-    json.dump(opinions_list, fp, ensure_ascii=False, separators=(",",": "), indent=4 )
-# print(opinions_list)
-# for opinion in opinions_list:
-#     # pprint.pformat(opinion)
-#     pprint.pprint(opinion)
+
+with open("./opinions_json/"+product_id+'.json', 'w', encoding="utf-8") as fp:
+    json.dump(opinions_list, fp, ensure_ascii=False, indent=4, separators=(',', ': '))
+
+print(len(opinions_list))
+# pprint.pprint(opinions_list)
+

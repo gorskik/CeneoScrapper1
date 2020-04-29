@@ -1,10 +1,12 @@
 #import bibliotek
 from flask import Flask
-#utwotrzenie instancji (obiektu) klasy Flask reprezentującej aplikację
+
+#utworzenie obiektu (instancji) klasy Flask reprezentunącego aplikację
 app = Flask(__name__)
 
-#from app import routes
+#import widoków/routingów z aplikacji
 from app import views
 
-if __name__ == "__main__":
+#uruchomienie aplikacji
+if  __name__=='__main__':
     app.run(debug=True)
