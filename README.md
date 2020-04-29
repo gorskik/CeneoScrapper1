@@ -21,3 +21,23 @@
 ## etap3
 -sposob przechodzenia po kolejnych stronach z opiniami
 -eksport opinii do pliku json
+
+
+## etap 4
+
+eliminacja powtarzających się fragmentów kodu
+transformacja danych (typ danych, czyszczenie danych )
+
+## etam 5
+
+zapis pobranych danych do obiektu dataframe (ramka danych)
+wykonanie prostych obliczeń na danych
+wykonanie prostych wykresów
+
+
+## etap 6
+zainstalowanie i uruchamianie Flaska
+struktura aplikacji /CeneoScraper /run.py /config.py /app /init.py /views.py /models.py /scraper.py /analyzer.py /static/ /main.css /figures/ /fig.png /templates/ /base.html /opinions
+/requirements.txt /.venv /README.md
+routing (nawigowanie po stronach serwisu)
+widoki (Jinja)
