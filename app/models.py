@@ -1,28 +1,62 @@
-lass Product:
-    def __init__(self, product_id, name, opinions = []):
+#import bibliotek
+import requests
+from bs4 import BeautifulSoup
+from enum import Enum, auto
+
+class Product():
+    def __init__(self, product_id=None, name=None, opinions=[]):
         self.product_id = product_id
         self.name = name
         self.opinions = opinions
-    def __str__(self):
-        return f'Product id: {self.product_id}\nName: {self.name}\nOpinions: '.join(str(opinion) for opinion in self.opinions)
-        #return f'Product id: {self.product_id}\nName: {self.name}\nOpinions: \n{[str(opinion) for opinion in self.opinions]}'
+    
+    def extract_product(self):
+        page_response = requests.get("https://www.ceneo.pl/"+self.product_id)
+        page_tree = BeautifulSoup(page_response.text, 'html.parser')
+        self.name = page_tree.select("h1.product-name").pop().get_text().strip()
+        try:
+            opinions_count = int(page_tree.select("a.product-reviews-link > span").pop().get_text().strip())
+        except IndexError:
+            opinions_count = 0
+        if opinions_count > 0:
+            url_prefix = "https://www.ceneo.pl"
+            url_postfix = "#tab=reviews"
+            url = url_prefix+"/"+self.product_id+url_postfix
+            while url:
+                #pobranie kodu HTML strony z adresu URL
+                page_response = requests.get(url)
+                page_tree = BeautifulSoup(page_response.text, 'html.parser')
+
+                #wybranie z kodu strony fragmentów odpowiadających poszczególnym opiniom
+                opinions = page_tree.select("li.js_product-review")
+                
+                #ekstrakcja składowyh dla pojedynczej opinii z listy
+                for opinion in opinions: 
+                    op = Opinion()
+                    op.extract_opinion(opinion)
+                    self.opinions.append(op)
+                try:
+                    url = url_prefix+page_tree.select("a.pagination__next").pop()["href"]
+                except IndexError:
+                    url = None
 
 class Opinion:
-    #słownik ze składowymi opinii i ich selektorami
-    tags = {
-        "recommendation":['div', 'product-review-summary', 'em'],
-        "stars":['span', 'review-score-count'],
-        "content":['p', 'product-review-body'],
-        "author":['div', 'reviewer-name-line'],
-        "pros":['div', 'pros-cell', 'ul'],
-        "cons":['div', 'cons-cell', 'ul'],
-        "useful":['button', 'vote-yes', 'span'],
-        "useless":['button', 'vote-no', 'span'],
-        "purchased":['div', 'product-review-pz', 'em']
+    #lista składowych opinii wraz z selektorami i atrybutami
+    selectors = {
+        "author": ['div.reviewer-name-line'],
+        "recommendation":['div.product-review-summary > em'],
+        "stars":['span.review-score-count'],
+        "content": ['p.product-review-body'],
+        "pros": ['div.pros-cell > ul'],
+        "cons":['div.cons-cell > ul'], 
+        "useful":['button.vote-yes', "data-total-vote"],
+        "useless":['button.vote-no', "data-total-vote"],
+        "purchased":['div.product-review-pz'],
+        "purchase_date":['span.review-time > time:nth-of-type(1)',"datetime"],
+        "review_date":['span.review-time > time:nth-of-type(2)',"datetime"]
     }
-    #definicja konstruktora (inicjalizatora) klasy Opinion
-    def __init__(self, opinion_id=None, author=None, recommendation=None, stars=None, content=None, pros=None, cons=None,
-                 useful=None, useless=None, purchased=None, purchase_date=None, review_date=None):
+    #konstruktor (inincjalizator) obiektu klasy
+    def __init__(self, opinion_id=None, author=None, recommendation=None, stars=None, content=None, 
+                pros=None, cons=None, useful=None, useless=None, purchased=None, purchase_date=None, review_date=None):
         self.opinion_id = opinion_id
         self.author = author
         self.recommendation = recommendation
@@ -35,12 +69,28 @@ class Opinion:
         self.purchased = purchased
         self.purchase_date = purchase_date
         self.review_date = review_date
+    # reprezentacja tekstowa obiektu klasy
     def __str__(self):
-        return f'Opinion id: {self.opinion_id}\nAuthor: {self.author}\nStars: {self.stars}\n'
-    def extract_opinion(self):
+        return f'opinion id: {self.opinion_id}\n author: {self.author}\n'
+
+    #reprezentacja słownikowa obiektu
+    def __repr__(self):
+        pass
+    #
+    def extract_opinion(self, opinion):
+        features = {key:extract_feature(opinion, *args)
+                    for key, args in selectors.items()}
+        self.opinion_id = int(opinion["data-entry-id"])
+        pass
+    def transform_opinion(self):
+        features["purchased"] = True if features["purchased"] == "Opinia potwierdzona zakupem" else False
+        features["useful"] = int(features["useful"])
+        features["useless"] = int(features["useless"])
+        features["content"] = remove_whitespaces(features["content"])
+        features["pros"] = remove_whitespaces(features["pros"])
+        features["cons"] = remove_whitespaces(features["cons"])
         pass
 
-opinion1 = Opinion()
-opinion2 = Opinion()
-product = Product(None, None, opinions=[opinion1, opinion2])
-print(product)
+
+product = Product("92745077")
+product.extract_product()
