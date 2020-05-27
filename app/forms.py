@@ -3,13 +3,12 @@ from wtforms import StringField, SubmitField
 from wtforms.validators import DataRequired, Length, Regexp
 
 class ProductForm(FlaskForm):
-    product_id = StringField(
-        'Podaj kod produktu z serwisu Ceneo.pl: ',
+    product_code = StringField(
+        "Podaj kod produktu do pobrania opinii", 
         validators=[
-            DataRequired('Musisz podać kod produktu!'),
-            Length(min=8, max=8, message='Kod produktu musi mieć osiem znaków!'),
-            Regexp('^[0-9]+$', message='Kod produktu może zawierać tylko cyfry!')
+            DataRequired(message="Musisz podać kod produktu"),
+            Length(min=8, max=8, message="Kod produktu musi mieć 8 znaków"),
+            Regexp(regex="^[0-9]+$", message="Kod produktu może zawierać tylko cyfry")
         ]
     )
-    submit = SubmitField('Pobierz')
-© 2020 GitHub, Inc.
+    submit = SubmitField("Pobierz")
